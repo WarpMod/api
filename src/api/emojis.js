@@ -1,23 +1,41 @@
 const libraryUrl = 'https://library.penguinmod.com/files/emojis';
-let lastFetchResult = "";
-let lastFetchTime = 0;
+const libMetaUrl = 'https://library.penguinmod.com/files/emojis/_meta.json';
+
+let lastHTMLFetchResult = "";
+let lastHTMLFetchTime = 0;
+let lastMetaFetchResult = {};
+let lastMetaFetchTime = 0;
 
 const getHtmlResponse = async () => {
-    if (Date.now() - lastFetchTime > 30000) {
+    if (Date.now() - lastHTMLFetchTime > 30000) {
         // its been 30s, refetch list
         const response = await fetch(libraryUrl);
         const htmle = await response.text();
 
-        lastFetchResult = htmle;
-        lastFetchTime = Date.now();
+        lastHTMLFetchResult = htmle;
+        lastHTMLFetchTime = Date.now();
 
         return htmle;
     } else {
-        return lastFetchResult;
+        return lastHTMLFetchResult;
+    }
+};
+const getMetadata = async () => {
+    if (Date.now() - lastMetaFetchTime > 30000) {
+        // its been 30s, refetch list
+        const response = await fetch(libMetaUrl);
+        const json = await response.json();
+
+        lastMetaFetchResult = json;
+        lastMetaFetchTime = Date.now();
+
+        return json;
+    } else {
+        return lastMetaFetchResult;
     }
 };
 
-module.exports = async (_, res) => {
+module.exports = async (req, res) => {
     try {
         const htmle = await getHtmlResponse();
         const emojis = htmle
@@ -34,10 +52,41 @@ module.exports = async (_, res) => {
 
         if (!Array.isArray(emojis)) throw new Error('Emojis did not result in array');
 
-        res.status(200)
-            .json(emojis);
+        switch (req.query.type) {
+            case "organized":
+                const metadata = await getMetadata();
+
+                const orgEmojis = {};
+                const emojisWithCategories = [];
+                for (const emojiCategory in metadata.emojis) {
+                    orgEmojis[emojiCategory] = [];
+                    for (const emoji of metadata.emojis[emojiCategory]) {
+                        const category = orgEmojis[emojiCategory];
+                        emojisWithCategories.push(emoji);
+                        category.push(emoji);
+                    }
+                }
+                orgEmojis["uncategorized"] = [];
+                for (const emoji of emojis) {
+                    if (!emojisWithCategories.includes(emoji)) {
+                        const category = orgEmojis["uncategorized"];
+                        category.push(emoji);
+                    }
+                }
+                
+                res.status(200)
+                    .json({
+                        emojis: orgEmojis,
+                        categories: metadata.categories
+                    });
+                break;
+            default:
+                res.status(200)
+                    .json(emojis);
+                break;
+        }
     } catch (e) {
-        res.status(400)
+        res.status(500)
             .json({
                 error: String(e)
             });
