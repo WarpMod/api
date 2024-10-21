@@ -20,7 +20,7 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json({ limit: "10kb" }));
 
 app.get('/', async function (_, res) {
-    res.send("ermm.. what the sigma...");
+    res.send("Server Working");
 });
 
 app.get('/tts', endpointTTS);
