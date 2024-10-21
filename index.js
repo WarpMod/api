@@ -23,6 +23,10 @@ app.get('/', async function (_, res) {
     res.send("Server Working");
 });
 
+app.get('/api/login', async function (_, res) {
+    res.send("Error: Comming Soon");
+});
+
 app.get('/tts', endpointTTS);
 app.get('/emojis', endpointEmojis);
 
